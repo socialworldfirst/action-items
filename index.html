@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Action Items</title>
+<style>
+  :root {
+    --charcoal: #2D2D2D;
+    --bg: #F5F5F0;
+    --card: #FFFFFF;
+    --border: #E5E7EB;
+    --text: #2D2D2D;
+    --text-secondary: #6B7280;
+    --ext-bg: #FEF3C7;
+    --ext-text: #92400E;
+    --mi-bg: #FEE2E2;
+    --mi-text: #991B1B;
+    --t1: #DC2626;
+    --t2: #F59E0B;
+    --t3: #3B82F6;
+    --t4: #6B7280;
+    --accent: #2D2D2D;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    min-height: 100vh;
+    padding-bottom: env(safe-area-inset-bottom, 20px);
+  }
+
+  /* Header */
+  .header {
+    background: var(--charcoal);
+    color: white;
+    padding: 16px 20px;
+    padding-top: max(16px, env(safe-area-inset-top));
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.3px; }
+  .header .subtitle { font-size: 12px; color: #9CA3AF; margin-top: 2px; }
+  .header-actions { display: flex; gap: 8px; margin-top: 12px; }
+  .header-btn {
+    background: rgba(255,255,255,0.1);
+    color: white;
+    border: 1px solid rgba(255,255,255,0.2);
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+    flex: 1;
+    text-align: center;
+  }
+  .header-btn:active { background: rgba(255,255,255,0.2); transform: scale(0.97); }
+  .header-btn.primary { background: white; color: var(--charcoal); font-weight: 600; }
+  .header-btn.primary:active { background: #E5E7EB; }
+
+  /* Tab bar */
+  .tab-bar {
+    display: flex;
+    gap: 0;
+    padding: 0 16px;
+    background: white;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 82px;
+    z-index: 99;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .tab {
+    flex: 1;
+    padding: 12px 8px;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    transition: all 0.15s;
+    white-space: nowrap;
+    position: relative;
+  }
+  .tab.active { color: var(--text); }
+  .tab[data-tier="t1"].active { border-bottom-color: var(--t1); }
+  .tab[data-tier="t2"].active { border-bottom-color: var(--t2); }
+  .tab[data-tier="t3"].active { border-bottom-color: var(--t3); }
+  .tab[data-tier="t4"].active { border-bottom-color: var(--t4); }
+  .tab .count {
+    display: inline-block;
+    background: var(--border);
+    color: var(--text-secondary);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 10px;
+    margin-left: 4px;
+  }
+  .tab.active .count { background: var(--charcoal); color: white; }
+
+  /* Content */
+  .content { padding: 12px 16px 100px; }
+  .tier-section { display: none; }
+  .tier-section.active { display: block; }
+
+  .tier-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding: 0 4px;
+  }
+  .tier-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+  .tier-label span {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  /* Cards */
+  .item-card {
+    background: var(--card);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 10px;
+    border: 1px solid var(--border);
+    transition: all 0.15s;
+  }
+  .item-card:active { transform: scale(0.99); }
+  .item-top { display: flex; align-items: flex-start; gap: 12px; }
+  .item-num {
+    font-size: 13px;
+    font-weight: 700;
+    color: #9CA3AF;
+    min-width: 20px;
+    padding-top: 1px;
+  }
+  .item-body { flex: 1; min-width: 0; }
+  .item-task {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.4;
+    margin-bottom: 6px;
+  }
+  .item-notes {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+  .item-type {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 6px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .item-type.external { background: var(--ext-bg); color: var(--ext-text); }
+  .item-type.myinput { background: var(--mi-bg); color: var(--mi-text); }
+
+  /* Comment section per item */
+  .item-comment {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+  }
+  .comment-toggle {
+    font-size: 12px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    user-select: none;
+  }
+  .comment-toggle .arrow { transition: transform 0.2s; font-size: 10px; }
+  .comment-toggle.open .arrow { transform: rotate(90deg); }
+  .comment-area {
+    display: none;
+    margin-top: 8px;
+  }
+  .comment-area.open { display: block; }
+  .comment-input {
+    width: 100%;
+    min-height: 60px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    color: var(--text);
+    background: #FAFAFA;
+    resize: vertical;
+    line-height: 1.4;
+  }
+  .comment-input:focus { outline: none; border-color: var(--charcoal); background: white; }
+  .comment-input::placeholder { color: #C4C4C4; }
+  .comment-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 6px;
+    flex-wrap: wrap;
+  }
+  .comment-chip {
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: white;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .comment-chip:active { background: var(--charcoal); color: white; }
+  .comment-chip.selected { background: var(--charcoal); color: white; border-color: var(--charcoal); }
+
+  /* Floating action bar */
+  .fab-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: white;
+    border-top: 1px solid var(--border);
+    padding: 12px 16px;
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+    display: none;
+    z-index: 100;
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
+  }
+  .fab-bar.visible { display: block; }
+  .fab-bar .count-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    text-align: center;
+  }
+  .fab-actions { display: flex; gap: 8px; }
+  .fab-btn {
+    flex: 1;
+    padding: 12px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+    border: none;
+    transition: all 0.15s;
+  }
+  .fab-btn:active { transform: scale(0.97); }
+  .fab-btn.copy { background: var(--charcoal); color: white; }
+  .fab-btn.clear { background: #F3F4F6; color: var(--text-secondary); }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.9);
+    background: var(--charcoal);
+    color: white;
+    padding: 14px 24px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    z-index: 200;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.25s;
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+
+  /* Updated timestamp */
+  .updated {
+    text-align: center;
+    font-size: 11px;
+    color: #C4C4C4;
+    padding: 20px 0 8px;
+  }
+
+  /* View All toggle */
+  .view-all-section { padding: 0 16px 100px; display: none; }
+  .view-all-section.active { display: block; }
+  .view-all-section .tier-group { margin-bottom: 20px; }
+  .view-all-section .tier-group-header {
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 8px 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* Scrollbar hide for tab bar */
+  .tab-bar::-webkit-scrollbar { display: none; }
+  .tab-bar { -ms-overflow-style: none; scrollbar-width: none; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Action Items</h1>
+  <div class="subtitle" id="lastUpdated">Updated just now</div>
+  <div class="header-actions">
+    <button class="header-btn" onclick="toggleViewAll()">View All</button>
+    <button class="header-btn primary" id="copyAllBtn" onclick="copyUpdates()">Copy Updates</button>
+  </div>
+</div>
+
+<div class="tab-bar" id="tabBar">
+  <div class="tab active" data-tier="t1" onclick="switchTab('t1')">T1 <span class="count" id="count-t1">0</span></div>
+  <div class="tab" data-tier="t2" onclick="switchTab('t2')">T2 <span class="count" id="count-t2">0</span></div>
+  <div class="tab" data-tier="t3" onclick="switchTab('t3')">T3 <span class="count" id="count-t3">0</span></div>
+  <div class="tab" data-tier="t4" onclick="switchTab('t4')">T4 <span class="count" id="count-t4">0</span></div>
+</div>
+
+<div class="content" id="content"></div>
+<div class="view-all-section" id="viewAllSection"></div>
+
+<div class="fab-bar" id="fabBar">
+  <div class="count-label" id="fabCount">0 items with updates</div>
+  <div class="fab-actions">
+    <button class="fab-btn clear" onclick="clearAll()">Clear All</button>
+    <button class="fab-btn copy" onclick="copyUpdates()">Copy for /todo</button>
+  </div>
+</div>
+
+<div class="toast" id="toast">Copied to clipboard</div>
+
+<script>
+// ===== DATA =====
+const DATA = {
+  updated: "2026-03-09T00:00:00",
+  tiers: {
+    t1: {
+      label: "Urgent / Critical",
+      color: "#DC2626",
+      items: [
+        { id: "t1-1", type: "EXTERNAL", task: "Hire social media manager", notes: "Role is posted. Screen candidates, schedule interviews. Need someone who understands short-form video and B2B tone for WorldFirst." },
+        { id: "t1-2", type: "EXTERNAL", task: "Hire eco-social intern", notes: "Review applications, shortlist top 3. Needs content creation chops and sustainability awareness. Confirm start date with HR." },
+        { id: "t1-3", type: "EXTERNAL", task: "Produce final China Sourcing Map versions", notes: "Trial print done. Jenny and Natalie to produce the fully ready digital and print versions of the China Sourcing Map white paper. Coordinate final file prep \u2014 bleed, trim marks, colour profiles for print; optimised PDF for digital distribution. Chase them for timeline and proof rounds." },
+        { id: "t1-4", type: "MY INPUT", task: "Update CSM audit skill for full-paper run", notes: "Upgrade the /china_sourcing_map_audit Claude skill to autonomously process ALL pages in a single invocation. Auto-detect all page images, iterate sequentially, crop sections, run editorial + design audit, produce one comprehensive .docx. Coordinates with T2 #6." },
+        { id: "t1-5", type: "MY INPUT", task: "Create auto-audit skill for CSM paper", notes: "Build a new Claude skill that automatically audits the China Sourcing Map paper end-to-end. Pull latest page images, run through every page without manual triggers, flag red flags, premium copy suggestions, and design issues, output complete audit .docx with embedded screenshots." }
+      ]
+    },
+    t2: {
+      label: "Important, Not Urgent",
+      color: "#F59E0B",
+      items: [
+        { id: "t2-1", type: "EXTERNAL", task: "Set up CSN landing lead-gen flow", notes: "Design the lead-gen capture flow for the CSN landing page \u2014 form fields, nurture sequence, and handoff to CRM. Brief Wanshi and production team on implementation." },
+        { id: "t2-2", type: "MY INPUT", task: "Produce Canton Fair content", notes: "Canton Fair 2026 prep content \u2014 sourcing guides, exhibitor tips, what to expect, party/networking event coverage. Build on existing Canton Fair Playbook video. YouTube deep dive + reel series." },
+        { id: "t2-3", type: "MY INPUT", task: "Produce China Sourcing Navigator content", notes: "Run /csn_pipe for current production status. Priority cities queued in tracker. Each city needs research brief, narrative, carousel, and PDF." },
+        { id: "t2-4", type: "MY INPUT", task: "Create CSN site content", notes: "Write and produce all content pages for sourcing.worldfirst.com \u2014 city deep dives, category pages, landing copy, CTAs. Prioritise Tier 1 cities ahead of Canton Fair." },
+        { id: "t2-5", type: "MY INPUT", task: "Audit CSN site design and dev", notes: "Review sourcing.worldfirst.com for design quality, UX flow, responsive behaviour, page speed, and code quality. Identify gaps vs the Guangzhou reference page." },
+        { id: "t2-6", type: "MY INPUT", task: "Finalise China Sourcing Map paper", notes: "Complete final round of edits \u2014 copy, layout, data accuracy, and design polish. Use updated audit skill (T1 #4) for full-paper audit in one pass. Coordinates with T1 #3 final production." }
+      ]
+    },
+    t3: {
+      label: "Upcoming / Later",
+      color: "#3B82F6",
+      items: [
+        { id: "t3-1", type: "EXTERNAL", task: "Confirm mini-documentary timeline", notes: "Follow up with Tay on the mini-documentary project. Get timeline, deliverables, and edit schedule confirmed." },
+        { id: "t3-2", type: "EXTERNAL", task: "Post LinkedIn hiring announcement", notes: "Draft and publish a LinkedIn post for the social media manager and/or eco-social intern roles. WorldFirst brand voice." },
+        { id: "t3-3", type: "MY INPUT", task: "Optimise CSN site for SEO and AEO", notes: "Add sitemap.xml, robots.txt, JSON-LD schema, Open Graph tags, Twitter cards, and canonical tags to sourcing.worldfirst.com." },
+        { id: "t3-4", type: "MY INPUT", task: "Build 1688 sourcing agent landing page", notes: "Design and build a dedicated landing page for the 1688 sourcing agent service. Align with CSN content ecosystem and 1688 cross-border partnership context." }
+      ]
+    },
+    t4: {
+      label: "Backlog / Ideas",
+      color: "#6B7280",
+      items: [
+        { id: "t4-1", type: "MY INPUT", task: "Plan payment corridor content", notes: "Map out WorldFirst payment corridors and plan content explaining how each works for importers." },
+        { id: "t4-2", type: "MY INPUT", task: "Build brand content central AI", notes: "Design and build a centralised knowledge base for WorldFirst content. Website page as content hub." },
+        { id: "t4-3", type: "MY INPUT", task: "Set up Claude Code routine tasks", notes: "Define recurring tasks that Claude Code should handle automatically \u2014 weekly pipeline checks, monthly listen scans, inbox reviews." },
+        { id: "t4-4", type: "EXTERNAL", task: "Follow up on 1688 redesign plans", notes: "XiaoLu (1688 cross-border coordinator) offered to share 1688\u2019s April-May 2026 redesign plans. Chase her so WorldFirst content and CSN align with the new 1688 experience." },
+        { id: "t4-5", type: "MY INPUT", task: "Plan social channels CRO strategy", notes: "Map and optimise 3 major CRO pipes on WorldFirst social: DMs, App downloads, Website traffic from social." },
+        { id: "t4-6", type: "MY INPUT", task: "Explore WorldTrade Pay-by-Link product idea", notes: "Pay-by-link feature concept \u2014 sellers generate a payment link, buyers pay in local currency, seller receives in theirs." }
+      ]
+    }
+  }
+};
+
+// ===== STATE =====
+let currentTab = 't1';
+let viewAll = false;
+let comments = JSON.parse(localStorage.getItem('todo_comments') || '{}');
+let actions = JSON.parse(localStorage.getItem('todo_actions') || '{}');
+
+// ===== RENDER =====
+function render() {
+  updateCounts();
+  renderTabs();
+  renderContent();
+  renderViewAll();
+  updateFab();
+  updateTimestamp();
+}
+
+function updateCounts() {
+  for (const tier of ['t1','t2','t3','t4']) {
+    document.getElementById(`count-${tier}`).textContent = DATA.tiers[tier].items.length;
+  }
+}
+
+function renderTabs() {
+  document.querySelectorAll('.tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.tier === currentTab);
+  });
+}
+
+function switchTab(tier) {
+  if (viewAll) toggleViewAll();
+  currentTab = tier;
+  renderTabs();
+  renderContent();
+}
+
+function renderContent() {
+  const el = document.getElementById('content');
+  const tier = DATA.tiers[currentTab];
+  el.innerHTML = `
+    <div class="tier-label">
+      <div class="tier-dot" style="background:${tier.color}"></div>
+      <span>${tier.label}</span>
+    </div>
+    ${tier.items.map((item, i) => renderCard(item, i + 1)).join('')}
+    <div class="updated" id="updatedBottom">Last synced: ${formatDate(DATA.updated)}</div>
+  `;
+  el.style.display = viewAll ? 'none' : 'block';
+}
+
+function renderCard(item, num) {
+  const typeClass = item.type === 'EXTERNAL' ? 'external' : 'myinput';
+  const comment = comments[item.id] || '';
+  const action = actions[item.id] || '';
+  const hasUpdate = comment || action;
+
+  return `
+    <div class="item-card" id="card-${item.id}" style="${hasUpdate ? 'border-left: 3px solid var(--charcoal);' : ''}">
+      <div class="item-top">
+        <div class="item-num">${num}</div>
+        <div class="item-body">
+          <div class="item-task">${item.task}</div>
+          <div class="item-notes">${item.notes}</div>
+        </div>
+        <div class="item-type ${typeClass}">${item.type === 'EXTERNAL' ? 'EXTERNAL' : 'MY INPUT'}</div>
+      </div>
+      <div class="item-comment">
+        <div class="comment-toggle ${hasUpdate ? 'open' : ''}" onclick="toggleComment('${item.id}')">
+          <span class="arrow">&#9654;</span>
+          ${hasUpdate ? 'Update pending' : 'Add update'}
+        </div>
+        <div class="comment-area ${hasUpdate ? 'open' : ''}" id="comment-${item.id}">
+          <div class="comment-actions">
+            <div class="comment-chip ${action === 'done' ? 'selected' : ''}" onclick="setAction('${item.id}','done')">Done</div>
+            <div class="comment-chip ${action === 'move-up' ? 'selected' : ''}" onclick="setAction('${item.id}','move-up')">Move Up</div>
+            <div class="comment-chip ${action === 'move-down' ? 'selected' : ''}" onclick="setAction('${item.id}','move-down')">Move Down</div>
+            <div class="comment-chip ${action === 'to-external' ? 'selected' : ''}" onclick="setAction('${item.id}','to-external')">To External</div>
+            <div class="comment-chip ${action === 'to-myinput' ? 'selected' : ''}" onclick="setAction('${item.id}','to-myinput')">To My Input</div>
+          </div>
+          <textarea class="comment-input" placeholder="Add a note, update, or instruction..." oninput="saveComment('${item.id}', this.value)">${comment}</textarea>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderViewAll() {
+  const el = document.getElementById('viewAllSection');
+  let html = '';
+  for (const [tierKey, tier] of Object.entries(DATA.tiers)) {
+    html += `
+      <div class="tier-group">
+        <div class="tier-group-header">
+          <div class="tier-dot" style="background:${tier.color}; width:10px; height:10px; border-radius:50%;"></div>
+          ${tierKey.toUpperCase()} — ${tier.label}
+        </div>
+        ${tier.items.map((item, i) => renderCard(item, i + 1)).join('')}
+      </div>
+    `;
+  }
+  el.innerHTML = html;
+}
+
+// ===== INTERACTIONS =====
+function toggleComment(id) {
+  const area = document.getElementById(`comment-${id}`);
+  const toggle = area.previousElementSibling;
+  area.classList.toggle('open');
+  toggle.classList.toggle('open');
+}
+
+function saveComment(id, value) {
+  comments[id] = value;
+  localStorage.setItem('todo_comments', JSON.stringify(comments));
+  updateFab();
+}
+
+function setAction(id, action) {
+  if (actions[id] === action) {
+    delete actions[id];
+  } else {
+    actions[id] = action;
+  }
+  localStorage.setItem('todo_actions', JSON.stringify(actions));
+  render();
+}
+
+function toggleViewAll() {
+  viewAll = !viewAll;
+  document.getElementById('content').style.display = viewAll ? 'none' : 'block';
+  document.getElementById('viewAllSection').classList.toggle('active', viewAll);
+  document.getElementById('tabBar').style.display = viewAll ? 'none' : 'flex';
+  if (viewAll) renderViewAll();
+}
+
+function updateFab() {
+  const count = getUpdatedItemCount();
+  const fab = document.getElementById('fabBar');
+  fab.classList.toggle('visible', count > 0);
+  document.getElementById('fabCount').textContent = `${count} item${count !== 1 ? 's' : ''} with updates`;
+}
+
+function getUpdatedItemCount() {
+  const ids = new Set([...Object.keys(comments).filter(k => comments[k]), ...Object.keys(actions)]);
+  return ids.size;
+}
+
+function copyUpdates() {
+  const lines = ['/todo'];
+  let hasUpdates = false;
+
+  for (const [tierKey, tier] of Object.entries(DATA.tiers)) {
+    for (const item of tier.items) {
+      const comment = comments[item.id] || '';
+      const action = actions[item.id] || '';
+      if (!comment && !action) continue;
+      hasUpdates = true;
+
+      const tierNum = tierKey.replace('t', '');
+      const itemNum = tier.items.indexOf(item) + 1;
+      let line = `${tierKey.toUpperCase()}-${itemNum} "${item.task}"`;
+
+      if (action) {
+        const actionLabels = {
+          'done': 'MARK DONE',
+          'move-up': 'MOVE UP one tier',
+          'move-down': 'MOVE DOWN one tier',
+          'to-external': 'change to EXTERNAL',
+          'to-myinput': 'change to MY INPUT'
+        };
+        line += ` — ${actionLabels[action]}`;
+      }
+      if (comment) {
+        line += ` — ${comment}`;
+      }
+      lines.push(line);
+    }
+  }
+
+  if (!hasUpdates) {
+    lines.push('(no changes — just refresh and display)');
+  }
+
+  const text = lines.join('\n');
+  navigator.clipboard.writeText(text).then(() => {
+    showToast('Copied! Paste into Claude');
+  }).catch(() => {
+    // Fallback for mobile
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = 0;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast('Copied! Paste into Claude');
+  });
+}
+
+function clearAll() {
+  comments = {};
+  actions = {};
+  localStorage.removeItem('todo_comments');
+  localStorage.removeItem('todo_actions');
+  render();
+  showToast('All updates cleared');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+function formatDate(dateStr) {
+  const d = new Date(dateStr);
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function updateTimestamp() {
+  document.getElementById('lastUpdated').textContent = `Updated ${formatDate(DATA.updated)}`;
+}
+
+// ===== INIT =====
+render();
+</script>
+</body>
+</html>
