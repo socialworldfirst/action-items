@@ -393,7 +393,7 @@
 
 <script>
 const DATA = {
-  updated: "2026-03-11T13:55:00",
+  updated: "2026-03-11T13:58:00",
   tiers: {
     t1: {
       color: "#DC2626",
@@ -444,6 +444,7 @@ if (lastUp !== DATA.updated) {
   localStorage.removeItem('todo_cmt');
   localStorage.removeItem('todo_act');
   localStorage.removeItem('todo_edits');
+  localStorage.removeItem('todo_rem');
   localStorage.setItem('todo_last_updated', DATA.updated);
 }
 let cmt = JSON.parse(localStorage.getItem('todo_cmt') || '{}');
