@@ -302,7 +302,6 @@
   }
   .fab-btn:active { transform: scale(0.97); }
   .fab-copy { background: var(--charcoal); color: #fff; }
-  .fab-push { background: #2563EB; color: #fff; }
   .fab-clr { background: #f0f0f0; color: #888; }
 
   /* === VIEW ALL === */
@@ -366,7 +365,6 @@
   <span class="fab-label" id="fabN">0 updates</span>
   <button class="fab-btn fab-clr" onclick="clr()">Clear</button>
   <button class="fab-btn fab-copy" onclick="copyUpdates()">Copy</button>
-  <button class="fab-btn fab-push" onclick="pushUpdates()">Push</button>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -679,146 +677,6 @@ function getChangesBody() {
   }
   if (!has) return null;
   return lines.join('\n');
-}
-
-function applyLocalChanges() {
-  var tierKeys = ['t1', 't2', 't3', 't4'];
-  // 1. Remove done items
-  for (var id in act) {
-    if (act[id] === 'done') {
-      for (var k in DATA.tiers) {
-        var items = DATA.tiers[k].items;
-        for (var i = items.length - 1; i >= 0; i--) {
-          if (items[i].id === id) { items.splice(i, 1); break; }
-        }
-      }
-    }
-  }
-  // 2. Move items between tiers
-  for (var id in act) {
-    if (act[id] !== 'move-up' && act[id] !== 'move-down') continue;
-    var dir = act[id] === 'move-up' ? -1 : 1;
-    for (var ti = 0; ti < tierKeys.length; ti++) {
-      var items = DATA.tiers[tierKeys[ti]].items;
-      var found = false;
-      for (var i = 0; i < items.length; i++) {
-        if (items[i].id === id) {
-          var target = ti + dir;
-          if (target >= 0 && target < tierKeys.length) {
-            var item = items.splice(i, 1)[0];
-            DATA.tiers[tierKeys[target]].items.push(item);
-          }
-          found = true; break;
-        }
-      }
-      if (found) break;
-    }
-  }
-  // 3. Type changes
-  for (var id in act) {
-    if (act[id] === 'to-external' || act[id] === 'to-myinput') {
-      var item = findItem(id);
-      if (item) item.type = act[id] === 'to-external' ? 'EXTERNAL' : 'MY INPUT';
-    }
-  }
-  // 4. Edits
-  for (var id in edits) {
-    if (edits[id]) {
-      var item = findItem(id);
-      if (item) {
-        if (edits[id].task) item.task = edits[id].task;
-        if (edits[id].notes !== undefined) item.notes = edits[id].notes;
-      }
-    }
-  }
-  // 5. Append comments
-  for (var id in cmt) {
-    if (cmt[id]) {
-      var item = findItem(id);
-      if (item) item.notes += ' | ' + cmt[id];
-    }
-  }
-  // 6. Re-number
-  for (var ti = 0; ti < tierKeys.length; ti++) {
-    var items = DATA.tiers[tierKeys[ti]].items;
-    for (var i = 0; i < items.length; i++) {
-      items[i].id = tierKeys[ti] + '-' + (i + 1);
-    }
-  }
-  DATA.updated = new Date().toISOString().slice(0, 19);
-}
-
-function serializeData() {
-  var esc = function(s) { return s.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n'); };
-  var s = 'const DATA = {\n';
-  s += '  updated: "' + DATA.updated + '",\n';
-  s += '  tiers: {\n';
-  var tierKeys = ['t1', 't2', 't3', 't4'];
-  for (var ti = 0; ti < tierKeys.length; ti++) {
-    var k = tierKeys[ti];
-    var t = DATA.tiers[k];
-    s += '    ' + k + ': {\n';
-    s += '      color: "' + t.color + '",\n';
-    s += '      items: [\n';
-    for (var i = 0; i < t.items.length; i++) {
-      var it = t.items[i];
-      s += '        { id: "' + it.id + '", type: "' + it.type + '", task: "' + esc(it.task) + '", notes: "' + esc(it.notes) + '" }';
-      s += i < t.items.length - 1 ? ',\n' : '\n';
-    }
-    s += '      ]\n';
-    s += '    }';
-    s += ti < tierKeys.length - 1 ? ',\n' : '\n';
-  }
-  s += '  }\n';
-  s += '};';
-  return s;
-}
-
-async function pushUpdates() {
-  var pat = localStorage.getItem('todo_gh_pat');
-  if (!pat) {
-    pat = prompt('GitHub PAT (fine-grained, contents:write on socialworldfirst/action-items):');
-    if (!pat) return;
-    localStorage.setItem('todo_gh_pat', pat);
-  }
-  var hasChanges = Object.keys(act).length > 0 || Object.keys(edits).length > 0 || Object.keys(cmt).some(function(k) { return cmt[k]; });
-  if (!hasChanges) { toast('No changes'); return; }
-  toast('Pushing...');
-  try {
-    var resp = await fetch('https://api.github.com/repos/socialworldfirst/action-items/contents/index.html', {
-      headers: { 'Authorization': 'Bearer ' + pat }
-    });
-    if (!resp.ok) {
-      if (resp.status === 401 || resp.status === 403) { localStorage.removeItem('todo_gh_pat'); toast('Bad PAT \u2014 cleared, try again'); }
-      else { toast('Fetch error: ' + resp.status); }
-      return;
-    }
-    var fileData = await resp.json();
-    var sha = fileData.sha;
-    var raw = fileData.content.replace(/\n/g, '');
-    var bytes = Uint8Array.from(atob(raw), function(c) { return c.charCodeAt(0); });
-    var content = new TextDecoder().decode(bytes);
-    applyLocalChanges();
-    var newDataStr = serializeData();
-    var updated = content.replace(/const DATA = \{[\s\S]*?\n\};/, newDataStr);
-    var encBytes = new TextEncoder().encode(updated);
-    var bin = '';
-    for (var i = 0; i < encBytes.length; i++) bin += String.fromCharCode(encBytes[i]);
-    var encoded = btoa(bin);
-    var putResp = await fetch('https://api.github.com/repos/socialworldfirst/action-items/contents/index.html', {
-      method: 'PUT',
-      headers: { 'Authorization': 'Bearer ' + pat, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: 'Update action items ' + new Date().toISOString().slice(0, 10), content: encoded, sha: sha })
-    });
-    if (!putResp.ok) {
-      if (putResp.status === 401 || putResp.status === 403) { localStorage.removeItem('todo_gh_pat'); toast('Bad PAT \u2014 cleared, try again'); }
-      else if (putResp.status === 409) { toast('Conflict \u2014 refresh and retry'); }
-      else { toast('Push error: ' + putResp.status); }
-      return;
-    }
-    clr();
-    toast('Pushed! Live in ~60s');
-  } catch (e) { toast('Network error'); }
 }
 
 function clr() {
