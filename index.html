@@ -395,13 +395,13 @@ let cur = 't1', va = false;
 let cmt = JSON.parse(localStorage.getItem('todo_cmt') || '{}');
 let act = JSON.parse(localStorage.getItem('todo_act') || '{}');
 let rem = JSON.parse(localStorage.getItem('todo_rem') || '{}');
-if (!localStorage.getItem('todo_rem_v1')) {
+if (!localStorage.getItem('todo_rem_v2')) {
   rem['t1-1'] = { set: '2026-03-11T10:00:00', due: '2026-03-13T09:00:00' };
   rem['t1-2'] = { set: '2026-03-11T10:00:00', due: '2026-03-13T09:00:00' };
   rem['t2-1'] = { set: '2026-03-11T10:00:00', due: '2026-03-13T09:00:00' };
   rem['t1-6'] = { set: '2026-03-10T09:00:00', due: '2026-03-11T09:00:00' };
   localStorage.setItem('todo_rem', JSON.stringify(rem));
-  localStorage.setItem('todo_rem_v1', '1');
+  localStorage.setItem('todo_rem_v2', '1');
 }
 
 function isOver(due) { return new Date(due) <= new Date(); }
