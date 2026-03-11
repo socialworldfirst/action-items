@@ -439,6 +439,13 @@ const DATA = {
 };
 
 let cur = 't1', va = false;
+var lastUp = localStorage.getItem('todo_last_updated');
+if (lastUp !== DATA.updated) {
+  localStorage.removeItem('todo_cmt');
+  localStorage.removeItem('todo_act');
+  localStorage.removeItem('todo_edits');
+  localStorage.setItem('todo_last_updated', DATA.updated);
+}
 let cmt = JSON.parse(localStorage.getItem('todo_cmt') || '{}');
 let act = JSON.parse(localStorage.getItem('todo_act') || '{}');
 let rem = JSON.parse(localStorage.getItem('todo_rem') || '{}');
