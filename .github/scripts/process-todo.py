@@ -68,6 +68,8 @@ def parse_changes(body):
 
         action = None
         comment = None
+        rename = None
+        new_notes = None
 
         parts = re.split(r'\s*\u2014\s*', rest)
         for part in parts:
@@ -85,6 +87,14 @@ def parse_changes(body):
                 action = 'to-external'
             elif upper == 'CHANGE TO MY INPUT':
                 action = 'to-myinput'
+            elif part.startswith('RENAME '):
+                m2 = re.match(r'RENAME "([^"]*)"', part)
+                if m2:
+                    rename = m2.group(1)
+            elif part.startswith('NEW NOTES '):
+                m2 = re.match(r'NEW NOTES "(.*)"', part, re.DOTALL)
+                if m2:
+                    new_notes = m2.group(1)
             elif part.startswith('REMINDER'):
                 continue
             else:
@@ -95,6 +105,8 @@ def parse_changes(body):
             'num': num,
             'action': action,
             'comment': comment,
+            'rename': rename,
+            'new_notes': new_notes,
         })
 
     return changes
@@ -114,6 +126,12 @@ def apply_changes(data, changes):
             continue
 
         item = items[idx]
+
+        if ch.get('rename'):
+            item['task'] = ch['rename']
+
+        if ch.get('new_notes') is not None:
+            item['notes'] = ch['new_notes']
 
         if ch['comment']:
             if item['notes']:
