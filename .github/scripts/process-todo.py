@@ -1,20 +1,21 @@
 import os
 import re
 import json
+import subprocess
 from datetime import datetime, timezone
 
 
 def extract_data(html):
-    match = re.search(r'const DATA = (\{.*?\});', html, re.DOTALL)
+    match = re.search(r'(const DATA = \{.*?\});', html, re.DOTALL)
     if not match:
         raise ValueError("Could not find DATA block")
-    js_obj = match.group(1)
-    # Convert JS object to valid JSON
-    js_obj = re.sub(r'(\w+):', r'"\1":', js_obj)  # quote keys
-    js_obj = js_obj.replace("'", '"')  # single to double quotes
-    # Handle trailing commas
-    js_obj = re.sub(r',\s*([}\]])', r'\1', js_obj)
-    return json.loads(js_obj), match
+    js_block = match.group(1)
+    # Use Node.js to parse the JS object into JSON
+    node_code = js_block + '\nconsole.log(JSON.stringify(DATA));'
+    result = subprocess.run(['node', '-e', node_code], capture_output=True, text=True)
+    if result.returncode != 0:
+        raise ValueError(f"Node.js parse error: {result.stderr}")
+    return json.loads(result.stdout.strip()), match
 
 
 def rebuild_js(data):
@@ -36,8 +37,8 @@ def rebuild_js(data):
 
         for i, item in enumerate(tier['items']):
             item['id'] = f'{tk}-{i+1}'
-            task_esc = item['task'].replace('"', '\\"')
-            notes_esc = item['notes'].replace('"', '\\"')
+            task_esc = item['task'].replace('\\', '\\\\').replace('"', '\\"')
+            notes_esc = item['notes'].replace('\\', '\\\\').replace('"', '\\"')
             comma = ',' if i < len(tier['items']) - 1 else ''
             lines.append(f'        {{ id: "{item["id"]}", type: "{item["type"]}", task: "{task_esc}", notes: "{notes_esc}" }}{comma}')
 
@@ -63,7 +64,6 @@ def parse_changes(body):
 
         tier = m.group(1).lower()
         num = int(m.group(2))
-        task_name = m.group(3)
         rest = m.group(4).strip()
 
         action = None
@@ -86,14 +86,13 @@ def parse_changes(body):
             elif upper == 'CHANGE TO MY INPUT':
                 action = 'to-myinput'
             elif part.startswith('REMINDER'):
-                continue  # skip reminder info
+                continue
             else:
                 comment = part
 
         changes.append({
             'tier': tier,
             'num': num,
-            'task': task_name,
             'action': action,
             'comment': comment,
         })
