@@ -275,6 +275,7 @@
   }
   .fab-btn:active { transform: scale(0.97); }
   .fab-copy { background: var(--charcoal); color: #fff; }
+  .fab-push { background: #2563EB; color: #fff; }
   .fab-clr { background: #f0f0f0; color: #888; }
 
   /* === VIEW ALL === */
@@ -337,7 +338,8 @@
 <div class="fab" id="fab">
   <span class="fab-label" id="fabN">0 updates</span>
   <button class="fab-btn fab-clr" onclick="clr()">Clear</button>
-  <button class="fab-btn fab-copy" onclick="copyUpdates()">Copy for /todo</button>
+  <button class="fab-btn fab-copy" onclick="copyUpdates()">Copy</button>
+  <button class="fab-btn fab-push" onclick="pushUpdates()">Push</button>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -553,7 +555,16 @@ function updFab() {
 }
 
 function copyUpdates() {
-  var lines = ['/todo'], has = false;
+  var body = getChangesBody();
+  var txt = '/todo\n' + (body || '(no changes \u2014 just refresh)');
+  navigator.clipboard.writeText(txt).then(function() { toast('Copied!'); }).catch(function() {
+    var ta = document.createElement('textarea'); ta.value = txt; ta.style.cssText = 'position:fixed;opacity:0';
+    document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); toast('Copied!');
+  });
+}
+
+function getChangesBody() {
+  var lines = [], has = false;
   for (var k in DATA.tiers) {
     var t = DATA.tiers[k];
     for (var i = 0; i < t.items.length; i++) {
@@ -564,17 +575,46 @@ function copyUpdates() {
       var num = i + 1;
       var l = k.toUpperCase() + '-' + num + ' "' + it.task + '"';
       if (a) l += ' \u2014 ' + {done:'MARK DONE','move-up':'MOVE UP','move-down':'MOVE DOWN','to-external':'change to EXTERNAL','to-myinput':'change to MY INPUT'}[a];
-      if (r) l += ' \u2014 REMINDER ' + (isOver(r.due) ? 'OVERDUE' : 'due ' + fmtRem(r.due)) + ' (set ' + new Date(r.set).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) + ')';
+      if (r) l += ' \u2014 REMINDER ' + (isOver(r.due) ? 'DUE NOW' : 'due ' + fmtRem(r.due)) + ' (set ' + new Date(r.set).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) + ')';
       if (c) l += ' \u2014 ' + c;
       lines.push(l);
     }
   }
-  if (!has) lines.push('(no changes \u2014 just refresh)');
-  var txt = lines.join('\n');
-  navigator.clipboard.writeText(txt).then(function() { toast('Copied!'); }).catch(function() {
-    var ta = document.createElement('textarea'); ta.value = txt; ta.style.cssText = 'position:fixed;opacity:0';
-    document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); toast('Copied!');
-  });
+  if (!has) return null;
+  return lines.join('\n');
+}
+
+function pushUpdates() {
+  var pat = localStorage.getItem('todo_gh_pat');
+  if (!pat) {
+    pat = prompt('Enter your GitHub PAT (fine-grained, issues:write on socialworldfirst/action-items):');
+    if (!pat) return;
+    localStorage.setItem('todo_gh_pat', pat);
+  }
+  var body = getChangesBody();
+  if (!body) { toast('No changes'); return; }
+  toast('Pushing...');
+  fetch('https://api.github.com/repos/socialworldfirst/action-items/issues', {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + pat, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title: '/todo update', body: body })
+  }).then(function(r) {
+    if (!r.ok) {
+      if (r.status === 401 || r.status === 403) {
+        localStorage.removeItem('todo_gh_pat');
+        toast('Bad PAT \u2014 cleared, try again');
+      } else {
+        toast('Error: ' + r.status);
+      }
+      return;
+    }
+    return r.json();
+  }).then(function(data) {
+    if (data) {
+      clr();
+      toast('Pushed! Updating in ~60s');
+    }
+  }).catch(function(e) { toast('Network error'); });
 }
 
 function clr() {
