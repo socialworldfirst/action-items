@@ -136,6 +136,21 @@
     text-overflow: ellipsis;
     min-width: 0;
   }
+  .row-rem {
+    font-size: 9px;
+    font-weight: 700;
+    padding: 2px 5px;
+    border-radius: 3px;
+    background: #FEF3C7;
+    color: #92400E;
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+  .row-rem.due {
+    background: #D1FAE5;
+    color: #065F46;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
   .row-dot {
     width: 6px;
     height: 6px;
@@ -183,6 +198,41 @@
     cursor: pointer;
   }
   .chip:active, .chip.on { background: var(--charcoal); color: #fff; border-color: var(--charcoal); }
+
+  /* === REMINDERS === */
+  .rem-row {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+  .rem-label {
+    font-size: 10px;
+    color: #999;
+    font-weight: 600;
+    margin-right: 2px;
+  }
+  .rem-chip {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 4px;
+    border: 1px solid #FDE68A;
+    background: #FEF3C7;
+    color: #92400E;
+    cursor: pointer;
+  }
+  .rem-chip:active { background: #92400E; color: #fff; }
+  .rem-chip.clr { background: #fff; border-color: var(--border); color: #999; }
+  .rem-chip.clr:active { background: #eee; }
+  .rem-info {
+    font-size: 9px;
+    color: #999;
+    width: 100%;
+    margin-top: 2px;
+  }
+
   .row-input {
     width: 100%;
     padding: 6px 8px;
@@ -344,13 +394,46 @@ const DATA = {
 let cur = 't1', va = false;
 let cmt = JSON.parse(localStorage.getItem('todo_cmt') || '{}');
 let act = JSON.parse(localStorage.getItem('todo_act') || '{}');
+let rem = JSON.parse(localStorage.getItem('todo_rem') || '{}');
+if (!localStorage.getItem('todo_rem_v1')) {
+  rem['t1-1'] = { set: '2026-03-11T10:00:00', due: '2026-03-13T09:00:00' };
+  rem['t1-2'] = { set: '2026-03-11T10:00:00', due: '2026-03-13T09:00:00' };
+  rem['t2-1'] = { set: '2026-03-11T10:00:00', due: '2026-03-13T09:00:00' };
+  localStorage.setItem('todo_rem', JSON.stringify(rem));
+  localStorage.setItem('todo_rem_v1', '1');
+}
+
+function isOver(due) { return new Date(due) <= new Date(); }
+
+function fmtRem(due) {
+  const d = new Date(due), now = new Date(), diff = d - now;
+  if (diff <= 0) return 'overdue';
+  const mins = Math.floor(diff / 60000);
+  if (mins < 60) return mins + 'm';
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return hrs + 'h';
+  const days = Math.floor(hrs / 24);
+  if (days === 1) return 'tmrw';
+  return days + 'd';
+}
+
+function fmtSetInfo(r) {
+  const s = new Date(r.set), d = new Date(r.due);
+  const fmt = t => t.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  const fmtD = t => t.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  const sameDay = s.toDateString() === d.toDateString();
+  const todayStr = new Date().toDateString();
+  let setStr = s.toDateString() === todayStr ? fmt(s) : fmtD(s) + ' ' + fmt(s);
+  let dueStr = d.toDateString() === todayStr ? fmt(d) : (sameDay ? fmt(d) : fmtD(d) + ' ' + fmt(d));
+  return 'Set ' + setStr + ' \u2192 Due ' + dueStr;
+}
 
 function render() {
-  for (const t of ['t1','t2','t3','t4']) document.getElementById(`n-${t}`).textContent = ` ${DATA.tiers[t].items.length}`;
+  for (const t of ['t1','t2','t3','t4']) document.getElementById('n-' + t).textContent = ' ' + DATA.tiers[t].items.length;
   document.querySelectorAll('.tb').forEach(t => t.classList.toggle('on', t.dataset.t === cur));
   renderList();
   updFab();
-  document.getElementById('ts').textContent = `Updated ${new Date(DATA.updated).toLocaleDateString('en-GB',{day:'numeric',month:'short'})}`;
+  document.getElementById('ts').textContent = 'Updated ' + new Date(DATA.updated).toLocaleDateString('en-GB',{day:'numeric',month:'short'});
 }
 
 function go(t) { if (va) toggleVA(); cur = t; render(); }
@@ -358,35 +441,49 @@ function go(t) { if (va) toggleVA(); cur = t; render(); }
 function renderList() {
   const el = document.getElementById('list');
   const items = DATA.tiers[cur].items;
-  el.innerHTML = items.map((it, i) => renderRow(it, i + 1)).join('');
+  el.innerHTML = items.map(function(it, i) { return renderRow(it, i + 1); }).join('');
   el.style.display = va ? 'none' : 'block';
 }
 
 function renderRow(it, n) {
-  const c = cmt[it.id] || '', a = act[it.id] || '', has = c || a;
-  return `<div class="row${has ? ' has-update' : ''}" id="r-${it.id}">
-    <div class="row-main" onclick="tog('${it.id}')">
-      <span class="row-num">${n}</span>
-      <span class="row-badge ${it.type==='EXTERNAL'?'ext':'mi'}">${it.type==='EXTERNAL'?'EXT':'ME'}</span>
-      <span class="row-task">${it.task}</span>
-      <span class="row-dot"></span>
-      <span class="row-arrow">&#9654;</span>
-    </div>
-    <div class="row-expand">
-      <div class="row-notes">${it.notes}</div>
-      <div class="row-actions">
-        <div class="chip${a==='done'?' on':''}" onclick="sa('${it.id}','done')">Done</div>
-        <div class="chip${a==='move-up'?' on':''}" onclick="sa('${it.id}','move-up')">Up</div>
-        <div class="chip${a==='move-down'?' on':''}" onclick="sa('${it.id}','move-down')">Down</div>
-        <div class="chip${a==='to-external'?' on':''}" onclick="sa('${it.id}','to-external')">Ext</div>
-        <div class="chip${a==='to-myinput'?' on':''}" onclick="sa('${it.id}','to-myinput')">Me</div>
-      </div>
-      <textarea class="row-input" placeholder="Note..." oninput="sc('${it.id}',this.value)">${c}</textarea>
-    </div>
-  </div>`;
+  var c = cmt[it.id] || '', a = act[it.id] || '', r = rem[it.id], has = c || a || r;
+  var remBadge = r ? '<span class="row-rem' + (isOver(r.due) ? ' due' : '') + '">' + fmtRem(r.due) + '</span>' : '';
+  var remInfo = r ? '<div class="rem-info">' + fmtSetInfo(r) + '</div>' : '';
+  var remClear = r ? '<div class="rem-chip clr" onclick="clearRem(\'' + it.id + '\')">&#10005;</div>' : '';
+  return '<div class="row' + (has ? ' has-update' : '') + '" id="r-' + it.id + '">' +
+    '<div class="row-main" onclick="tog(\'' + it.id + '\')">' +
+      '<span class="row-num">' + n + '</span>' +
+      '<span class="row-badge ' + (it.type==='EXTERNAL'?'ext':'mi') + '">' + (it.type==='EXTERNAL'?'EXT':'ME') + '</span>' +
+      '<span class="row-task">' + it.task + '</span>' +
+      remBadge +
+      '<span class="row-dot"></span>' +
+      '<span class="row-arrow">&#9654;</span>' +
+    '</div>' +
+    '<div class="row-expand">' +
+      '<div class="row-notes">' + it.notes + '</div>' +
+      '<div class="row-actions">' +
+        '<div class="chip' + (a==='done'?' on':'') + '" onclick="sa(\'' + it.id + '\',\'done\')">Done</div>' +
+        '<div class="chip' + (a==='move-up'?' on':'') + '" onclick="sa(\'' + it.id + '\',\'move-up\')">Up</div>' +
+        '<div class="chip' + (a==='move-down'?' on':'') + '" onclick="sa(\'' + it.id + '\',\'move-down\')">Down</div>' +
+        '<div class="chip' + (a==='to-external'?' on':'') + '" onclick="sa(\'' + it.id + '\',\'to-external\')">Ext</div>' +
+        '<div class="chip' + (a==='to-myinput'?' on':'') + '" onclick="sa(\'' + it.id + '\',\'to-myinput\')">Me</div>' +
+      '</div>' +
+      '<div class="rem-row">' +
+        '<span class="rem-label">Remind:</span>' +
+        '<div class="rem-chip" onclick="setRem(\'' + it.id + '\',60)">1h</div>' +
+        '<div class="rem-chip" onclick="setRem(\'' + it.id + '\',180)">3h</div>' +
+        '<div class="rem-chip" onclick="setRemEOD(\'' + it.id + '\')">EOD</div>' +
+        '<div class="rem-chip" onclick="setRem(\'' + it.id + '\',1440)">Tmrw</div>' +
+        '<div class="rem-chip" onclick="setRemDay(\'' + it.id + '\',5)">Fri</div>' +
+        remClear +
+        remInfo +
+      '</div>' +
+      '<textarea class="row-input" placeholder="Note..." oninput="sc(\'' + it.id + '\',this.value)">' + c + '</textarea>' +
+    '</div>' +
+  '</div>';
 }
 
-function tog(id) { document.getElementById(`r-${id}`).classList.toggle('open'); }
+function tog(id) { document.getElementById('r-' + id).classList.toggle('open'); }
 
 function sc(id, v) { cmt[id] = v; localStorage.setItem('todo_cmt', JSON.stringify(cmt)); updFab(); }
 
@@ -396,56 +493,109 @@ function sa(id, a) {
   render();
 }
 
+function setRem(id, mins) {
+  rem[id] = { set: new Date().toISOString(), due: new Date(Date.now() + mins * 60000).toISOString() };
+  localStorage.setItem('todo_rem', JSON.stringify(rem));
+  render();
+  toast('Reminder: ' + fmtRem(rem[id].due));
+}
+
+function setRemEOD(id) {
+  var eod = new Date();
+  eod.setHours(18, 0, 0, 0);
+  if (eod <= new Date()) eod.setDate(eod.getDate() + 1);
+  rem[id] = { set: new Date().toISOString(), due: eod.toISOString() };
+  localStorage.setItem('todo_rem', JSON.stringify(rem));
+  render();
+  toast('Reminder: EOD');
+}
+
+function setRemDay(id, dayOfWeek) {
+  var target = new Date();
+  var diff = dayOfWeek - target.getDay();
+  if (diff <= 0) diff += 7;
+  target.setDate(target.getDate() + diff);
+  target.setHours(9, 0, 0, 0);
+  var days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  rem[id] = { set: new Date().toISOString(), due: target.toISOString() };
+  localStorage.setItem('todo_rem', JSON.stringify(rem));
+  render();
+  toast('Reminder: ' + days[dayOfWeek]);
+}
+
+function clearRem(id) {
+  delete rem[id];
+  localStorage.setItem('todo_rem', JSON.stringify(rem));
+  render();
+  toast('Reminder cleared');
+}
+
 function toggleVA() {
   va = !va;
   document.getElementById('list').style.display = va ? 'none' : 'block';
   document.getElementById('tabs').style.display = va ? 'none' : 'flex';
-  const el = document.getElementById('va');
+  var el = document.getElementById('va');
   el.classList.toggle('on', va);
   if (va) {
-    let h = '';
-    for (const [k, t] of Object.entries(DATA.tiers)) {
-      h += `<div class="va-hdr"><div class="va-dot" style="background:${t.color}"></div>${k.toUpperCase()}</div>`;
-      h += t.items.map((it, i) => renderRow(it, i + 1)).join('');
+    var h = '';
+    for (var k in DATA.tiers) {
+      var t = DATA.tiers[k];
+      h += '<div class="va-hdr"><div class="va-dot" style="background:' + t.color + '"></div>' + k.toUpperCase() + '</div>';
+      h += t.items.map(function(it, i) { return renderRow(it, i + 1); }).join('');
     }
     el.innerHTML = h;
   }
 }
 
 function updFab() {
-  const ids = new Set([...Object.keys(cmt).filter(k => cmt[k]), ...Object.keys(act)]);
-  const c = ids.size;
-  const f = document.getElementById('fab');
-  f.classList.toggle('on', c > 0);
-  document.getElementById('fabN').textContent = `${c} update${c !== 1 ? 's' : ''}`;
+  var ids = new Set([
+    ...Object.keys(cmt).filter(function(k) { return cmt[k]; }),
+    ...Object.keys(act),
+    ...Object.keys(rem)
+  ]);
+  var c = ids.size;
+  document.getElementById('fab').classList.toggle('on', c > 0);
+  document.getElementById('fabN').textContent = c + ' update' + (c !== 1 ? 's' : '');
 }
 
 function copyUpdates() {
-  const lines = ['/todo']; let has = false;
-  for (const [k, t] of Object.entries(DATA.tiers)) {
-    for (const it of t.items) {
-      const c = cmt[it.id] || '', a = act[it.id] || '';
-      if (!c && !a) continue; has = true;
-      const num = t.items.indexOf(it) + 1;
-      let l = `${k.toUpperCase()}-${num} "${it.task}"`;
-      if (a) l += ` — ${{done:'MARK DONE','move-up':'MOVE UP','move-down':'MOVE DOWN','to-external':'change to EXTERNAL','to-myinput':'change to MY INPUT'}[a]}`;
-      if (c) l += ` — ${c}`;
+  var lines = ['/todo'], has = false;
+  for (var k in DATA.tiers) {
+    var t = DATA.tiers[k];
+    for (var i = 0; i < t.items.length; i++) {
+      var it = t.items[i];
+      var c = cmt[it.id] || '', a = act[it.id] || '', r = rem[it.id];
+      if (!c && !a && !r) continue;
+      has = true;
+      var num = i + 1;
+      var l = k.toUpperCase() + '-' + num + ' "' + it.task + '"';
+      if (a) l += ' \u2014 ' + {done:'MARK DONE','move-up':'MOVE UP','move-down':'MOVE DOWN','to-external':'change to EXTERNAL','to-myinput':'change to MY INPUT'}[a];
+      if (r) l += ' \u2014 REMINDER ' + (isOver(r.due) ? 'OVERDUE' : 'due ' + fmtRem(r.due)) + ' (set ' + new Date(r.set).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) + ')';
+      if (c) l += ' \u2014 ' + c;
       lines.push(l);
     }
   }
-  if (!has) lines.push('(no changes — just refresh)');
-  const txt = lines.join('\n');
-  navigator.clipboard.writeText(txt).then(() => toast('Copied!')).catch(() => {
-    const ta = document.createElement('textarea'); ta.value = txt; ta.style.cssText = 'position:fixed;opacity:0';
+  if (!has) lines.push('(no changes \u2014 just refresh)');
+  var txt = lines.join('\n');
+  navigator.clipboard.writeText(txt).then(function() { toast('Copied!'); }).catch(function() {
+    var ta = document.createElement('textarea'); ta.value = txt; ta.style.cssText = 'position:fixed;opacity:0';
     document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); toast('Copied!');
   });
 }
 
-function clr() { cmt = {}; act = {}; localStorage.removeItem('todo_cmt'); localStorage.removeItem('todo_act'); render(); toast('Cleared'); }
+function clr() {
+  cmt = {}; act = {}; rem = {};
+  localStorage.removeItem('todo_cmt');
+  localStorage.removeItem('todo_act');
+  localStorage.removeItem('todo_rem');
+  render();
+  toast('Cleared');
+}
 
-function toast(m) { const t = document.getElementById('toast'); t.textContent = m; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 1500); }
+function toast(m) { var t = document.getElementById('toast'); t.textContent = m; t.classList.add('show'); setTimeout(function() { t.classList.remove('show'); }, 1500); }
 
 render();
+setInterval(function() { render(); }, 60000);
 </script>
 </body>
 </html>
