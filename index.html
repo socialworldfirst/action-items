@@ -470,11 +470,7 @@ function renderRow(it, n) {
       '</div>' +
       '<div class="rem-row">' +
         '<span class="rem-label">Remind:</span>' +
-        '<div class="rem-chip" onclick="setRem(\'' + it.id + '\',60)">1h</div>' +
-        '<div class="rem-chip" onclick="setRem(\'' + it.id + '\',180)">3h</div>' +
-        '<div class="rem-chip" onclick="setRemEOD(\'' + it.id + '\')">EOD</div>' +
-        '<div class="rem-chip" onclick="setRem(\'' + it.id + '\',1440)">Tmrw</div>' +
-        '<div class="rem-chip" onclick="setRemDay(\'' + it.id + '\',5)">Fri</div>' +
+        buildRemChips(it.id) +
         remClear +
         remInfo +
       '</div>' +
@@ -510,17 +506,12 @@ function setRemEOD(id) {
   toast('Reminder: EOD');
 }
 
-function setRemDay(id, dayOfWeek) {
-  var target = new Date();
-  var diff = dayOfWeek - target.getDay();
-  if (diff <= 0) diff += 7;
-  target.setDate(target.getDate() + diff);
-  target.setHours(9, 0, 0, 0);
-  var days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  rem[id] = { set: new Date().toISOString(), due: target.toISOString() };
-  localStorage.setItem('todo_rem', JSON.stringify(rem));
-  render();
-  toast('Reminder: ' + days[dayOfWeek]);
+function buildRemChips(id) {
+  var s = '';
+  for (var h = 1; h <= 8; h++) s += '<div class="rem-chip" onclick="setRem(\'' + id + '\',' + (h*60) + ')">' + h + 'h</div>';
+  s += '<div class="rem-chip" onclick="setRemEOD(\'' + id + '\')">EOD</div>';
+  for (var d = 1; d <= 8; d++) s += '<div class="rem-chip" onclick="setRem(\'' + id + '\',' + (d*1440) + ')">' + d + 'd</div>';
+  return s;
 }
 
 function clearRem(id) {
