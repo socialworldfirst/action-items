@@ -399,6 +399,7 @@ if (!localStorage.getItem('todo_rem_v1')) {
   rem['t1-1'] = { set: '2026-03-11T10:00:00', due: '2026-03-13T09:00:00' };
   rem['t1-2'] = { set: '2026-03-11T10:00:00', due: '2026-03-13T09:00:00' };
   rem['t2-1'] = { set: '2026-03-11T10:00:00', due: '2026-03-13T09:00:00' };
+  rem['t1-6'] = { set: '2026-03-10T09:00:00', due: '2026-03-11T09:00:00' };
   localStorage.setItem('todo_rem', JSON.stringify(rem));
   localStorage.setItem('todo_rem_v1', '1');
 }
@@ -407,7 +408,7 @@ function isOver(due) { return new Date(due) <= new Date(); }
 
 function fmtRem(due) {
   const d = new Date(due), now = new Date(), diff = d - now;
-  if (diff <= 0) return 'overdue';
+  if (diff <= 0) return 'due';
   const mins = Math.floor(diff / 60000);
   if (mins < 60) return mins + 'm';
   const hrs = Math.floor(mins / 60);
@@ -446,13 +447,16 @@ function renderList() {
 
 function renderRow(it, n) {
   var c = cmt[it.id] || '', a = act[it.id] || '', r = rem[it.id], has = c || a || r;
-  var remBadge = r ? '<span class="row-rem' + (isOver(r.due) ? ' due' : '') + '">' + fmtRem(r.due) + '</span>' : '';
+  var isDue = r && isOver(r.due);
+  var badgeType = (isDue && it.type === 'EXTERNAL') ? 'mi' : (it.type === 'EXTERNAL' ? 'ext' : 'mi');
+  var badgeLabel = (isDue && it.type === 'EXTERNAL') ? 'ME' : (it.type === 'EXTERNAL' ? 'EXT' : 'ME');
+  var remBadge = r ? '<span class="row-rem' + (isDue ? ' due' : '') + '">' + fmtRem(r.due) + '</span>' : '';
   var remInfo = r ? '<div class="rem-info">' + fmtSetInfo(r) + '</div>' : '';
   var remClear = r ? '<div class="rem-chip clr" onclick="clearRem(\'' + it.id + '\')">&#10005;</div>' : '';
   return '<div class="row' + (has ? ' has-update' : '') + '" id="r-' + it.id + '">' +
     '<div class="row-main" onclick="tog(\'' + it.id + '\')">' +
       '<span class="row-num">' + n + '</span>' +
-      '<span class="row-badge ' + (it.type==='EXTERNAL'?'ext':'mi') + '">' + (it.type==='EXTERNAL'?'EXT':'ME') + '</span>' +
+      '<span class="row-badge ' + badgeType + '">' + badgeLabel + '</span>' +
       '<span class="row-task">' + it.task + '</span>' +
       remBadge +
       '<span class="row-dot"></span>' +
