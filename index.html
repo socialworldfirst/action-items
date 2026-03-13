@@ -193,6 +193,24 @@
     text-overflow: ellipsis;
     min-width: 0;
   }
+  .row-due {
+    font-size: 9px;
+    font-weight: 700;
+    padding: 2px 5px;
+    border-radius: 3px;
+    background: #EEF2FF;
+    color: #4338CA;
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+  .row-due.soon {
+    background: #FEF3C7;
+    color: #92400E;
+  }
+  .row-due.overdue {
+    background: #FEE2E2;
+    color: #DC2626;
+  }
   .row-rem {
     font-size: 9px;
     font-weight: 700;
@@ -427,14 +445,14 @@
 
 <script>
 const DATA = {
-  updated: "2026-03-13T10:00:00",
+  updated: "2026-03-13T10:15:00",
   tiers: {
     t1: {
       color: "#DC2626",
       items: [
         { id: "t1-1", type: "EXTERNAL", task: "Hire social media manager", notes: "Role is posted. Screen candidates, schedule interviews. Need someone who understands short-form video and B2B tone for WorldFirst." },
         { id: "t1-2", type: "EXTERNAL", task: "Hire eco-social intern", notes: "Review applications, shortlist top 3. Needs content creation chops and sustainability awareness. Confirm start date with HR." },
-        { id: "t1-3", type: "EXTERNAL", task: "Produce final China Sourcing Map versions", notes: "Trial print done. Jenny and Natalie to produce fully ready digital and print versions. Bleed, trim marks, colour profiles for print; optimised PDF for digital. Chase for timeline and proof rounds." },
+        { id: "t1-3", type: "EXTERNAL", task: "Produce final China Sourcing Map versions", notes: "Trial print done. Jenny and Natalie to produce fully ready digital and print versions. Bleed, trim marks, colour profiles for print; optimised PDF for digital. Chase for timeline and proof rounds.", due: "2026-03-14" },
         { id: "t1-4", type: "EXTERNAL", task: "Update CSM audit skill for full-paper run", notes: "Upgrade /china_sourcing_map_audit to process ALL pages of the China Sourcing Map paper in one invocation. Auto-detect images, iterate sequentially, crop sections, editorial + design audit, one comprehensive .docx." },
         { id: "t1-5", type: "EXTERNAL", task: "Create auto-audit skill for CSN website", notes: "Build a new Claude skill to audit the China Sourcing Navigator website (sourcing.worldfirst.com). Crawl all pages, check content quality, design consistency vs Guangzhou reference, responsive behaviour, broken links, SEO, Framer implementation. CSN = website, CSM = paper." },
         { id: "t1-6", type: "EXTERNAL", task: "Plan Canton Fair content", notes: "Sylvia confirmed kick-off. Now plan the full Canton Fair 2026 content approach — formats, topics, production schedule. Coordinates with T2 #2." }
@@ -445,7 +463,7 @@ const DATA = {
       items: [
         { id: "t2-1", type: "EXTERNAL", task: "Set up CSN landing lead-gen flow", notes: "Design lead-gen capture for CSN landing page — form fields, nurture sequence, CRM handoff. Brief Wanshi and production team." },
         { id: "t2-2", type: "MY INPUT", task: "Produce Pre-Canton Fair content", notes: "Canton Fair 2026 prep — sourcing guides, exhibitor tips, party/networking coverage. YouTube deep dive + reel series." },
-        { id: "t2-3", type: "EXTERNAL", task: "Produce City Deep Dive content", notes: "Pending Thomas to confirm the format. Due next Monday (Mar 16). Once confirmed, run /csn_pipe. Each city needs research brief, narrative, carousel, and PDF." },
+        { id: "t2-3", type: "EXTERNAL", task: "Produce City Deep Dive content", notes: "Pending Thomas to confirm the format. Once confirmed, run /csn_pipe. Each city needs research brief, narrative, carousel, and PDF.", due: "2026-03-16" },
         { id: "t2-4", type: "MY INPUT", task: "Replan CSN site format & Create CSN site content", notes: "Reassess site structure and format for sourcing.worldfirst.com. Then build all content pages — city deep dives, category pages, landing copy, CTAs. Prioritise Tier 1 cities." }
       ]
     },
@@ -455,7 +473,7 @@ const DATA = {
         { id: "t3-1", type: "EXTERNAL", task: "Confirm mini-documentary timeline", notes: "Follow up with Tay. Get timeline, deliverables, edit schedule confirmed." },
         { id: "t3-2", type: "MY INPUT", task: "Optimise CSN site for SEO and AEO", notes: "Sitemap, robots.txt, JSON-LD, OG tags, Twitter cards, canonicals for sourcing.worldfirst.com." },
         { id: "t3-3", type: "MY INPUT", task: "Create paid distribution plan for social boosting", notes: "Plan paid amplification strategy across all social channels — budget allocation, platform targeting (LinkedIn, Meta, TikTok), audience segments, boost criteria for top-performing organic posts, and ROI tracking framework." },
-        { id: "t3-4", type: "EXTERNAL", task: "Review YouTube long-form script", notes: "Script written and handed off. Pending review/feedback. Comes back to MY INPUT around Mar 20. Coordinates with Canton Fair and CSN content." }
+        { id: "t3-4", type: "EXTERNAL", task: "Review YouTube long-form script", notes: "Script written and handed off. Pending review/feedback. Comes back to MY INPUT around Mar 20. Coordinates with Canton Fair and CSN content.", due: "2026-03-20" }
       ]
     },
     t4: {
@@ -589,6 +607,20 @@ function renderRow(it, n) {
   var badgeLabel = displayType === 'EXTERNAL' ? 'EXT' : 'ME';
   var displayTask = e && e.task ? e.task : it.task;
   var displayNotes = e && e.notes !== undefined ? e.notes : it.notes;
+  var dueBadge = '';
+  if (it.due) {
+    var dueDate = new Date(it.due + 'T00:00:00');
+    var now = new Date(); now.setHours(0,0,0,0);
+    var diffDays = Math.ceil((dueDate - now) / 86400000);
+    var dueLabel = '';
+    var dueCls = '';
+    if (diffDays < 0) { dueLabel = Math.abs(diffDays) + 'd overdue'; dueCls = 'overdue'; }
+    else if (diffDays === 0) { dueLabel = 'today'; dueCls = 'overdue'; }
+    else if (diffDays === 1) { dueLabel = 'tomorrow'; dueCls = 'soon'; }
+    else if (diffDays <= 3) { dueLabel = diffDays + 'd'; dueCls = 'soon'; }
+    else { dueLabel = dueDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }); }
+    dueBadge = '<span class="row-due ' + dueCls + '">' + dueLabel + '</span>';
+  }
   var remBadge = r ? '<span class="row-rem' + (isDue ? ' due' : '') + '">' + fmtRem(r.due) + '</span>' : '';
   var remInfo = r ? '<div class="rem-info">' + fmtSetInfo(r) + '</div>' : '';
   var remClear = r ? '<div class="rem-chip clr" onclick="clearRem(\'' + it.id + '\')">&#10005;</div>' : '';
@@ -597,6 +629,7 @@ function renderRow(it, n) {
       '<span class="row-num">' + n + '</span>' +
       '<span class="row-badge ' + badgeType + (typeToggled ? ' toggled' : '') + '" onclick="event.stopPropagation();togType(\'' + it.id + '\')">' + badgeLabel + '</span>' +
       '<span class="row-task">' + displayTask + '</span>' +
+      dueBadge +
       remBadge +
       '<span class="row-edit-btn" onclick="event.stopPropagation();startEdit(\'' + it.id + '\')">&#9998;</span>' +
       '<span class="row-dot"></span>' +
