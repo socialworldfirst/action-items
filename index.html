@@ -445,7 +445,7 @@
 
 <script>
 const DATA = {
-  updated: "2026-03-18T12:00:00",
+  updated: "2026-03-18T15:38:00",
   tiers: {
     t1: {
       color: "#DC2626",
@@ -459,7 +459,7 @@ const DATA = {
     t2: {
       color: "#F59E0B",
       items: [
-        { id: "t2-1", type: "EXTERNAL", task: "Set up CSN landing lead-gen flow", notes: "Design lead-gen capture for CSN landing page — form fields, nurture sequence, CRM handoff. Brief Wanshi and production team." },
+        { id: "t2-1", type: "MY INPUT", task: "Set up CSN landing lead-gen flow", notes: "On me now. Design lead-gen capture for CSN landing page — form fields, nurture sequence, CRM handoff. Brief Wanshi and production team." },
         { id: "t2-2", type: "MY INPUT", task: "Produce Pre-Canton Fair content", notes: "Canton Fair 2026 prep — sourcing guides, exhibitor tips, party/networking coverage. YouTube deep dive + reel series." },
         { id: "t2-3", type: "EXTERNAL", task: "Produce City Deep Dive content", notes: "Pending Thomas to confirm the format. Once confirmed, run /csn_pipe. Each city needs research brief, narrative, carousel, and PDF.", due: "2026-03-16" },
         { id: "t2-4", type: "MY INPUT", task: "Replan CSN site format & Create CSN site content", notes: "Reassess site structure and format for sourcing.worldfirst.com. Then build all content pages — city deep dives, category pages, landing copy, CTAs. Prioritise Tier 1 cities." }
@@ -471,7 +471,7 @@ const DATA = {
         { id: "t3-1", type: "EXTERNAL", task: "Confirm mini-documentary timeline", notes: "Follow up with Tay. Get timeline, deliverables, edit schedule confirmed." },
         { id: "t3-2", type: "MY INPUT", task: "Optimise CSN site for SEO and AEO", notes: "Sitemap, robots.txt, JSON-LD, OG tags, Twitter cards, canonicals for sourcing.worldfirst.com." },
         { id: "t3-3", type: "MY INPUT", task: "Create paid distribution plan for social boosting", notes: "Plan paid amplification strategy across all social channels — budget allocation, platform targeting (LinkedIn, Meta, TikTok), audience segments, boost criteria for top-performing organic posts, and ROI tracking framework." },
-        { id: "t3-4", type: "EXTERNAL", task: "Review YouTube long-form script", notes: "Script written and handed off. Pending review/feedback. Comes back to MY INPUT around Mar 20. Coordinates with Canton Fair and CSN content.", due: "2026-03-20" }
+        { id: "t3-4", type: "MY INPUT", task: "Review YouTube long-form script", notes: "Script back — now on me to review. Coordinates with Canton Fair and CSN content.", due: "2026-03-20" }
       ]
     },
     t4: {
@@ -507,13 +507,10 @@ let cmt = JSON.parse(localStorage.getItem('todo_cmt') || '{}');
 let act = JSON.parse(localStorage.getItem('todo_act') || '{}');
 let rem = JSON.parse(localStorage.getItem('todo_rem') || '{}');
 let edits = JSON.parse(localStorage.getItem('todo_edits') || '{}');
-if (!localStorage.getItem('todo_rem_v2')) {
-  rem['t1-1'] = { set: '2026-03-11T10:00:00', due: '2026-03-13T09:00:00' };
-  rem['t1-2'] = { set: '2026-03-11T10:00:00', due: '2026-03-13T09:00:00' };
-  rem['t2-1'] = { set: '2026-03-11T10:00:00', due: '2026-03-13T09:00:00' };
-  rem['t1-6'] = { set: '2026-03-10T09:00:00', due: '2026-03-11T09:00:00' };
+if (!localStorage.getItem('todo_rem_v3')) {
+  rem['t3-4'] = { set: '2026-03-18T15:38:00', due: '2026-03-19T15:38:00' };
   localStorage.setItem('todo_rem', JSON.stringify(rem));
-  localStorage.setItem('todo_rem_v2', '1');
+  localStorage.setItem('todo_rem_v3', '1');
 }
 
 function isOver(due) { return new Date(due) <= new Date(); }
